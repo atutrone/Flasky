@@ -10,6 +10,7 @@ from wtforms import StringField, SubmitField
 from wtforms.validators import Required
 from flask_sqlalchemy import SQLAlchemy
 from flask_mail import Mail, Message
+from threading import Thread
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
@@ -66,11 +67,18 @@ def make_shell_context():
 manager.add_command("shell", Shell(make_context=make_shell_context))
 manager.add_command('db', MigrateCommand)
 
+def send_async_email(app, msg):
+    with app.app_context():
+        mail.send(msg)
+
 def send_email(to, subject, **kwargs):
     msg = Message(app.config['FLASKY_MAIL_SUBJECT_PREFIX'] + subject, sender=app.config['FLASKY_MAIL_SENDER'], recipients=[to])
     msg.body = 'Hello.py test'
     msg.html = '<b>HTML</b> Test from hello.py'
-    mail.send(msg)
+    #mail.send(msg)
+    thr = Thread(target=send_async_email, args=[app, msg])
+    thr.start()
+    return thr
 
 @app.errorhandler(404)
 def page_not_found(e):
